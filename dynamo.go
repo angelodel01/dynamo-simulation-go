@@ -3,51 +3,60 @@ package main
 
 import(
   "fmt"
-  "sync"
-  "time"
-  "crypto/md5"
-  "encoding/binary"
-  "strconv"
-  "math/rand"
 )
 
-
-type Message struct{
-  command string
-  node_id int
+func main() {
+  simulate_con_hash()
+  simulate_gossip()
 }
 
-
-type NodeHB struct{
-  id int
-  Hbcounter int
-  time int
-  dead bool
+func simulate_gossip(){
+  member_ch := make(chan map[int]map[int]NodeHB)
+  for me := 0; me < num_nodes; me++ {
+      my_HB_Table := make(map[int]NodeHB)
+      n := chooseNeighbors(me)
+      for i := 0; i < num_neighbors; i++{
+        my_HB_Table[n[i]] = NodeHB{id: n[i], Hbcounter: 0, time: 0, dead: false}
+      }
+      spawnNodeHB(NodeHB{id: me, Hbcounter: 0, time: 0, dead: false}, my_HB_Table, member_ch)
+  }
+  wg.Wait()
 }
 
+func simulate_con_hash(){
+    for r := range ring{
+      ring[r] = -1
+    }
+    for r := range request_ch{
+      request_ch[r] = nil
+      response_ch[r] = nil
+    }
+    AddNodeHash(num_nodes)
+    AddNodeHash(num_nodes)
+    AddNodeHash(num_nodes)
+    AddNodeHash(num_nodes)
+    AddNodeHash(num_nodes)
+    fmt.Printf("Ring %+v\n\n", ring)
 
-type NodeHash struct{
-  id int
-  hash_1 int
-  hash_2 int
+    put("Maria", 100)
+    put("John", 20)
+    put("Anna", 40)
+    put("Tim", 100)
+    put("Alex", 10)
+
+    get("Tim")
+    get("Alex")
+    get("Anna")
+    get("Maria")
+    get("John")
+
+    DeleteNodeHash(0)
+
+    get("Maria")
+    get("John")
+
+    DeleteNodeHash(1)
+    DeleteNodeHash(2)
+    DeleteNodeHash(3)
+    DeleteNodeHash(4)
 }
-
-///////////////////////////////
-
-var wg sync.WaitGroup
-var HB_mutex sync.Mutex
-const num_nodes = 8
-const num_neighbors = 2
-const max_cycles = 20
-const cycle_time = 2
-
-///////////////////////////////
-
-const mem_size = 50
-// var num_nodes = 0
-var ring [mem_size]int
-// var wg sync.WaitGroup
-var ring_mutex = &sync.Mutex{}
-var request_ch [mem_size]chan Message
-var response_ch [mem_size]chan Message
-var member_ch map[int]map[int]chan Node

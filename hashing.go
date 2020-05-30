@@ -1,73 +1,14 @@
 package main
 import(
   "fmt"
-  "sync"
   "time"
   "crypto/md5"
   "encoding/binary"
   "strconv"
 )
 
-type NodeHash struct{
-  id int
-  hash_1 int
-  hash_2 int
-}
-
-type Message struct{
-  command string
-  NodeHash_id int
-}
-
-const mem_size = 50
-var num_NodeHashs = 0
-var ring [mem_size]int
-var wg sync.WaitGroup
-var ring_mutex = &sync.Mutex{}
-var request_ch [mem_size]chan Message
-var response_ch [mem_size]chan Message
-
-func main(){
-  for r := range ring{
-    ring[r] = -1
-  }
-  for r := range request_ch{
-    request_ch[r] = nil
-    response_ch[r] = nil
-  }
-  AddNodeHash(num_NodeHashs)
-  AddNodeHash(num_NodeHashs)
-  AddNodeHash(num_NodeHashs)
-  AddNodeHash(num_NodeHashs)
-  AddNodeHash(num_NodeHashs)
-  fmt.Printf("Ring %+v\n\n", ring)
-
-  put("Maria", 100)
-  put("John", 20)
-  put("Anna", 40)
-  put("Tim", 100)
-  put("Alex", 10)
-
-  get("Tim")
-  get("Alex")
-  get("Anna")
-  get("Maria")
-  get("John")
-
-  DeleteNodeHash(0)
-
-  get("Maria")
-  get("John")
-
-  DeleteNodeHash(1)
-  DeleteNodeHash(2)
-  DeleteNodeHash(3)
-  DeleteNodeHash(4)
-}
-
-
 func AddNodeHash(id int){
-  num_NodeHashs++
+  num_nodes++
   hash_1 := GetMD5HashInt(id)%mem_size
   hash_2 := GetMD5HashInt(hash_1)%mem_size
   ring_mutex.Lock()
@@ -88,7 +29,7 @@ func NodeHashRoutine(me NodeHash){
   flag := true
   for flag{
     request := <-request_ch[me.id]
-    if request.command == "KILL" && request.NodeHash_id == me.id{
+    if request.command == "KILL" && request.node_id == me.id{
       ring_mutex.Lock()
       ring[me.hash_1] = -1
       ring[me.hash_2] = -1
@@ -100,8 +41,8 @@ func NodeHashRoutine(me NodeHash){
       response_ch[me.id] = nil
       request_ch[me.id] = nil
       flag = false
-    } else if (request.command == "GET" || request.command == "PUT") && (request.NodeHash_id == me.id) {
-      response_ch[me.id] <- Message{command: "CONFIRM", NodeHash_id: me.id}
+    } else if (request.command == "GET" || request.command == "PUT") && (request.node_id == me.id) {
+      response_ch[me.id] <- Message{command: "CONFIRM", node_id: me.id}
     }
   }
 
@@ -109,7 +50,7 @@ func NodeHashRoutine(me NodeHash){
 
 
 func DeleteNodeHash(id int){
-  request_ch[id] <- Message{command: "KILL", NodeHash_id: id}
+  request_ch[id] <- Message{command: "KILL", node_id: id}
 }
 
 
@@ -123,14 +64,14 @@ func get(key string) int{
     }
     hash++
   }
-  NodeHash_id := ring[hash]
+  node_id := ring[hash]
   ring_mutex.Unlock()
   time.Sleep(100 * time.Millisecond)
-  request_ch[NodeHash_id] <- Message{command: "GET", NodeHash_id: NodeHash_id}
-  resp := <-response_ch[NodeHash_id]
+  request_ch[node_id] <- Message{command: "GET", node_id: node_id}
+  resp := <-response_ch[node_id]
   if resp.command == "CONFIRM"{
-    fmt.Printf("Performing get(key: '%s') hashes to: %d, got NodeHash id: %d\n\n", key, original, resp.NodeHash_id)
-    return resp.NodeHash_id
+    fmt.Printf("Performing get(key: '%s') hashes to: %d, got NodeHash id: %d\n\n", key, original, resp.node_id)
+    return resp.node_id
   }
   return -1
 }
@@ -146,14 +87,14 @@ func put(key string, value int) int{
     }
     hash++
   }
-  NodeHash_id := ring[hash]
+  node_id := ring[hash]
   ring_mutex.Unlock()
   time.Sleep(100 * time.Millisecond)
-  request_ch[NodeHash_id] <- Message{command: "PUT", NodeHash_id: NodeHash_id}
-  resp := <-response_ch[NodeHash_id]
+  request_ch[node_id] <- Message{command: "PUT", node_id: node_id}
+  resp := <-response_ch[node_id]
   if resp.command == "CONFIRM"{
-    fmt.Printf("Performing put(key: '%s', value: %d) hashes to: %d, got NodeHash id: %d\n\n", key, value, original, resp.NodeHash_id)
-    return resp.NodeHash_id
+    fmt.Printf("Performing put(key: '%s', value: %d) hashes to: %d, got NodeHash id: %d\n\n", key, value, original, resp.node_id)
+    return resp.node_id
   }
   return -1
 }

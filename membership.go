@@ -4,43 +4,14 @@ import (
   "fmt"
   "time"
   "math/rand"
-  "sync"
 )
-
-type NodeHB struct{
-  id int
-  Hbcounter int
-  time int
-  dead bool
-}
-
-
-var wg sync.WaitGroup
-var HB_mutex sync.Mutex
-const num_NodeHBs = 8
-const num_neighbors = 2
-const max_cycles = 20
-const cycle_time = 2
-
-func main() {
-  member_ch := make(chan map[int]map[int]NodeHB)
-  for me := 0; me < num_NodeHBs; me++ {
-      my_HB_Table := make(map[int]NodeHB)
-      n := chooseNeighbors(me)
-      for i := 0; i < num_neighbors; i++{
-        my_HB_Table[n[i]] = NodeHB{id: n[i], Hbcounter: 0, time: 0, dead: false}
-      }
-      spawnNodeHB(NodeHB{id: me, Hbcounter: 0, time: 0, dead: false}, my_HB_Table, member_ch)
-  }
-  wg.Wait()
-}
 
 func chooseNeighbors(me int) [num_neighbors]int {
   var n [num_neighbors]int
   for i := 0; i < num_neighbors; i++{
-    var curr = rand.Intn(num_NodeHBs)
+    var curr = rand.Intn(num_nodes)
     for curr == me || curr == n[0]{
-      curr = rand.Intn(num_NodeHBs)
+      curr = rand.Intn(num_nodes)
     }
     n[i] = curr
   }
@@ -75,7 +46,6 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
     value, found := my_HB_Table[k]
     if found && !value.dead{//if the stuff in the incoming table is in the neighborhood
       if v.time > value.time && v.Hbcounter <= value.Hbcounter{
-        // fmt.Printf("NodeHB %d, has killed NodeHB %d\n", my_NodeHB.id, v.id)
         HB_mutex.Lock()
         my_HB_Table[k] = NodeHB{id: v.id, Hbcounter: v.Hbcounter, time: v.time, dead: true}
         HB_mutex.Unlock()
@@ -101,9 +71,9 @@ func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
   sender_map[my_NodeHB.id] = my_HB_Table
   for i := 0; i < max_cycles; i++{
     <-timer2.C
-    if !(i%2 == 0 && my_NodeHB.id%3 == 0){//generating failures for certain NodeHBs
+    // if !(i%2 == 0 && my_NodeHB.id%3 == 0){//generating failures for certain NodeHBs
       my_NodeHB.Hbcounter += 1
-    }
+    // }
     my_NodeHB.time += 1
     HB_mutex.Lock()
     my_HB_Table[my_NodeHB.id] = my_NodeHB
