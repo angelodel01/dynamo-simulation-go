@@ -9,9 +9,9 @@ import (
 func chooseNeighbors(me int) [num_neighbors]int {
   var n [num_neighbors]int
   for i := 0; i < num_neighbors; i++{
-    var curr = rand.Intn(num_nodes)
+    var curr = rand.Intn(hash_num_nodes)
     for curr == me || curr == n[0]{
-      curr = rand.Intn(num_nodes)
+      curr = rand.Intn(hash_num_nodes)
     }
     n[i] = curr
   }
@@ -71,9 +71,10 @@ func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
   sender_map[my_NodeHB.id] = my_HB_Table
   for i := 0; i < max_cycles; i++{
     <-timer2.C
-    // if !(i%2 == 0 && my_NodeHB.id%3 == 0){//generating failures for certain NodeHBs
-      my_NodeHB.Hbcounter += 1
+    // for j := 0; j < hash_num_nodes; j++{
+    //
     // }
+    my_NodeHB.Hbcounter += 1
     my_NodeHB.time += 1
     HB_mutex.Lock()
     my_HB_Table[my_NodeHB.id] = my_NodeHB

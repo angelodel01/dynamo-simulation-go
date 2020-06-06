@@ -9,6 +9,8 @@ import(
 type Message struct{
   command string
   node_id int
+  key string
+  val int
 }
 
 
@@ -39,6 +41,7 @@ const cycle_time = 2
 
 const mem_size = 50
 var num_nodes = 0
+var hash_num_nodes = 0
 var ring [mem_size]int
 var ring_mutex = &sync.Mutex{}
 var request_ch [mem_size]chan Message
