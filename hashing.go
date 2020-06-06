@@ -48,6 +48,7 @@ func NodeHashRoutine(me NodeHash){
       request_ch[me.id] = nil
       flag = false
     } else if (request.command == "GET" && request.node_id == me.id) {
+      fmt.Println("GET REQUEST IN NodeHashRoutine")
       read_val := readFromFile(request.node_id, request.key)
       response_ch[me.id] <- Message{command: "CONF_GET", node_id: me.id, key: request.key, val: read_val}
     } else if (request.command == "PUT" && request.node_id == me.id){
@@ -65,6 +66,7 @@ func DeleteNodeHash(id int){
 
 
 func get(key string) int{
+  fmt.Printf("inside get: %s\n", key)
   hash := GetMD5HashString(key)%mem_size
   original := hash
   ring_mutex.Lock()

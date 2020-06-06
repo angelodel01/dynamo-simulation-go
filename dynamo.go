@@ -3,6 +3,7 @@ package main
 
 import(
   "fmt"
+  // "time"
 )
 
 func main() {
@@ -103,6 +104,7 @@ func simulate_con_hash(){
     get("Maria")
     get("John")
 
+    fmt.Println("before deletes")
     DeleteNodeHash(1)
     DeleteNodeHash(2)
     DeleteNodeHash(3)
