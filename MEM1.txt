@@ -1,0 +1,3 @@
+Maria:100
+John:20
+Alex:10

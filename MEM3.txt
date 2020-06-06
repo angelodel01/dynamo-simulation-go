@@ -1,0 +1,4 @@
+John:20
+Anna:40
+Tim:100
+Alex:10
