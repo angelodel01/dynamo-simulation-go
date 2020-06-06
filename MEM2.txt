@@ -1,3 +1,0 @@
-Maria:100
-Anna:40
-Tim:100

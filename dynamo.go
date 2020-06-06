@@ -106,4 +106,5 @@ func simulate_con_hash(){
     DeleteNodeHash(1)
     DeleteNodeHash(2)
     DeleteNodeHash(3)
+    wg.Wait()
 }
