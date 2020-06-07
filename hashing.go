@@ -20,15 +20,16 @@ func AddNodeHash(id int){
   ring_mutex.Unlock()
   n := NodeHash{id: id, hash_1: hash_1, hash_2: hash_2}
   fmt.Printf("Adding NodeHash: %+v\n\n", n)
-  request_ch[id] = make(chan Message, 3)
-  response_ch[id] = make(chan Message, 3)
+  request_ch[id] = make(chan Message)
+  response_get_ch[id] = make(chan Message)
+  response_put_ch[id] = make(chan Message, 3)
   wg.Add(1)
   go NodeHashRoutine(n)
 }
 
 
 func NodeHashRoutine(me NodeHash){
-  defer wg.Done()
+  // defer wg.Done()
   flag := true
   file_name := "MEM" + strconv.Itoa(me.id) + ".txt"
   file, _ := os.Create(file_name)
@@ -36,24 +37,29 @@ func NodeHashRoutine(me NodeHash){
   for flag{
     request := <-request_ch[me.id]
     if request.command == "KILL" && request.node_id == me.id{
+      fmt.Printf("Node: %d received KILL command\n", me.id)
       ring_mutex.Lock()
       ring[me.hash_1] = -1
       ring[me.hash_2] = -1
+      ring_mutex.Unlock()
+      time.Sleep(time.Second)
       fmt.Printf("NodeHash : %d dies\n\n", me.id)
       fmt.Printf("Ring %+v\n\n", ring)
-      close(response_ch[me.id])
+      close(response_get_ch[me.id])
+      close(response_put_ch[me.id])
       close(request_ch[me.id])
-      ring_mutex.Unlock()
-      response_ch[me.id] = nil
+      response_get_ch[me.id] = nil
+      response_put_ch[me.id] = nil
       request_ch[me.id] = nil
       flag = false
+      wg.Done()
     } else if (request.command == "GET" && request.node_id == me.id) {
-      fmt.Println("GET REQUEST IN NodeHashRoutine")
+      // fmt.Println("GET REQUEST IN NodeHashRoutine")
       read_val := readFromFile(request.node_id, request.key)
-      response_ch[me.id] <- Message{command: "CONF_GET", node_id: me.id, key: request.key, val: read_val}
+      response_get_ch[me.id] <- Message{command: "CONF_GET", node_id: me.id, key: request.key, val: read_val}
     } else if (request.command == "PUT" && request.node_id == me.id){
       writeToFile(request.node_id, request.val, request.key)
-      response_ch[me.id] <- Message{command: "CONF_WR", node_id: me.id, key: "N/A", val: -1}
+      response_put_ch[me.id] <- Message{command: "CONF_WR", node_id: me.id, key: "N/A", val: -1}
     }
   }
 
@@ -61,15 +67,17 @@ func NodeHashRoutine(me NodeHash){
 
 
 func DeleteNodeHash(id int){
-  request_ch[id] <- Message{command: "KILL", node_id: id, key: "N/A", val: -1}
+  fmt.Printf("requesting node death in DeleteNodeHash id: %d\n", id)
+  // request_ch[id] <- Message{command: "KILL", node_id: id, key: "N/A", val: -1}
 }
 
 
 func get(key string) int{
-  fmt.Printf("inside get: %s\n", key)
+  fmt.Println("Inside GET")
   hash := GetMD5HashString(key)%mem_size
   original := hash
   ring_mutex.Lock()
+  // fmt.Printf("Ring in get %+v\n\n", ring)
   for ring[hash] == -1{
     if hash >= mem_size - 1{
       hash = 0
@@ -80,9 +88,9 @@ func get(key string) int{
   ring_mutex.Unlock()
   time.Sleep(100 * time.Millisecond)
   request_ch[node_id] <- Message{command: "GET", node_id: node_id, key: key, val: -1}
-  resp := <-response_ch[node_id]
+  resp := <-response_get_ch[node_id]
   if resp.command == "CONF_GET"{
-    fmt.Printf("Performing get(key: '%s') hashes to: %d, got NodeHash id: %d, with Value: %d, with Key: %s\n\n", key, original, resp.node_id, resp.val, resp.key)
+    fmt.Printf("Performed get(key: '%s') hashes to: %d, got NodeHash id: %d\nGot Value: %d, from Key: %s\n\n", key, original, resp.node_id, resp.val, resp.key)
     return resp.node_id
   }
   return -1
@@ -110,7 +118,7 @@ func put(key string, value int) int{
     request_ch[ids[j]] <- Message{command: "PUT", node_id: ids[j], key: key, val: value}
   }
   for k, _ := range ids{
-    resp := <-response_ch[ids[k]]
+    resp := <-response_put_ch[ids[k]]
     if resp.command == "CONF_WR"{
       fmt.Printf("Performing put(key: '%s', value: %d) hashes to: %d, got NodeHash id: %d\n\n", key, value, original, resp.node_id)
       return resp.node_id

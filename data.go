@@ -45,5 +45,6 @@ var hash_num_nodes = 0
 var ring [mem_size]int
 var ring_mutex = &sync.Mutex{}
 var request_ch [mem_size]chan Message
-var response_ch [mem_size]chan Message
+var response_get_ch [mem_size]chan Message
+var response_put_ch [mem_size]chan Message
 var member_ch map[int]map[int]chan NodeHB

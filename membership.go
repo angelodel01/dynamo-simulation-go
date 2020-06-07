@@ -12,6 +12,7 @@ func chooseNeighbors(me int) [num_neighbors]int {
     var curr = rand.Intn(hash_num_nodes)
     for curr == me || curr == n[0]{
       curr = rand.Intn(hash_num_nodes)
+      fmt.Println("After int generation 2")
     }
     n[i] = curr
   }
@@ -50,6 +51,12 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
         my_HB_Table[k] = NodeHB{id: v.id, Hbcounter: v.Hbcounter, time: v.time, dead: true}
         HB_mutex.Unlock()
         fmt.Printf("NodeHB %d, has killed NodeHB %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, v.id, k, sender_NodeHB_id, value, my_HB_Table[k], my_NodeHB.id,my_HB_Table)
+        DeleteNodeHash(v.id)
+      }else if v.dead{
+        HB_mutex.Lock()
+        my_HB_Table[k] = v
+        HB_mutex.Unlock()
+        fmt.Printf("For NodeHB : %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, k, sender_NodeHB_id, value, v, my_NodeHB.id,my_HB_Table)
       }else if v.time > value.time {//if the information is more recent
         HB_mutex.Lock()
         my_HB_Table[k] = v
@@ -71,16 +78,17 @@ func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
   sender_map[my_NodeHB.id] = my_HB_Table
   for i := 0; i < max_cycles; i++{
     <-timer2.C
-    // for j := 0; j < hash_num_nodes; j++{
-    //
-    // }
-    my_NodeHB.Hbcounter += 1
+    if my_NodeHB.id != 0 {
+      my_NodeHB.Hbcounter += 1
+    }
     my_NodeHB.time += 1
     HB_mutex.Lock()
     my_HB_Table[my_NodeHB.id] = my_NodeHB
     HB_mutex.Unlock()
     fmt.Printf("Update for NodeHB %d => time: %d, HB: %d\n", my_NodeHB.id, my_NodeHB.time, my_NodeHB.Hbcounter)
+    HB_mutex.Lock()
     sender_map[my_NodeHB.id] = my_HB_Table
+    HB_mutex.Unlock()
     member_ch <- sender_map
     timer2 = time.NewTimer(time.Second)
   }
