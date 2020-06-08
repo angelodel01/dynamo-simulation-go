@@ -47,8 +47,8 @@ func listenForTraffic(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
 func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]NodeHB, my_HB_Table map[int]NodeHB){
   for k, v := range new_values{//for all the information coming in
     value, found := my_HB_Table[k]
-    if found && !value.dead{//if the stuff in the incoming table is in the neighborhood
-      if v.time > value.time && v.Hbcounter <= value.Hbcounter{
+    if found && !value.dead{//if the stuff in the incoming table is in my table and I didn't mark it dead already
+      if v.time > value.time && v.Hbcounter <= value.Hbcounter{//If the incoming table's time value has been updated but its heartbeat counter is the same
         fmt.Printf("NodeHB %d, has killed NodeHB %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, v.id, k, sender_NodeHB_id, value, v, my_NodeHB.id,my_HB_Table)
         fmt.Printf("my_HB_Table[k].dead %v\n", my_HB_Table[k].dead)
         HB_mutex.Lock()

@@ -17,13 +17,17 @@ func simulate_gossip(){
   hash_num_nodes = num_nodes
   member_ch := make(chan map[int]map[int]NodeHB)
   fmt.Println("before spawning nodes")
+  array := make([]map[int]NodeHB, num_nodes)
   for me := 0; me < num_nodes; me++ {
       my_HB_Table := make(map[int]NodeHB)
       n := chooseNeighbors(me)
       for i := 0; i < num_neighbors ; i++{
         my_HB_Table[n[i]] = NodeHB{id: n[i], Hbcounter: 0, time: 0, dead: false}
       }
-      spawnNodeHB(NodeHB{id: me, Hbcounter: 0, time: 0, dead: false}, my_HB_Table, member_ch)
+	  array[me] = my_HB_Table
+  }
+  for me := 0; me < num_nodes; me++ {
+	spawnNodeHB(NodeHB{id: me, Hbcounter: 0, time: 0, dead: false}, array[me], member_ch)
   }
   wg_gossip.Wait()
 }
