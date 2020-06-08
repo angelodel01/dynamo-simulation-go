@@ -23,18 +23,17 @@ func AddNodeHash(id int){
   request_ch[id] = make(chan Message, 3)
   response_get_ch[id] = make(chan Message, 3)
   response_put_ch[id] = make(chan Message, 3)
-  wg.Add(1)
+  wg_hash.Add(1)
   go NodeHashRoutine(n)
 }
 
 
 func NodeHashRoutine(me NodeHash){
-  defer wg.Done()
   file_name := "MEM" + strconv.Itoa(me.id) + ".txt"
   file, _ := os.Create(file_name)
   file.Close()
+  fmt.Println("Nodehash %d	 waiting for a message", me.id)
   for request := range request_ch[me.id]{
-	fmt.Println("NodeHash still alive %d", me.id)
     if request.command == "KILL" && request.node_id == me.id{
       fmt.Printf("Node: %d received KILL command\n", me.id)
       ring_mutex.Lock()
@@ -47,9 +46,9 @@ func NodeHashRoutine(me NodeHash){
       close(response_get_ch[me.id])
       close(response_put_ch[me.id])
       close(request_ch[me.id])
-      response_get_ch[me.id] = nil
-      response_put_ch[me.id] = nil
-      request_ch[me.id] = nil
+      //response_get_ch[me.id] = nil
+      //response_put_ch[me.id] = nil
+      //request_ch[me.id] = nil
 	  break
     } else if (request.command == "GET" && request.node_id == me.id) {
       fmt.Println("GET REQUEST IN NodeHashRoutine")
@@ -60,7 +59,7 @@ func NodeHashRoutine(me NodeHash){
       response_put_ch[me.id] <- Message{command: "CONF_WR", node_id: me.id, key: "N/A", val: -1}
     }
   }
-	
+  wg_hash.Done()
   fmt.Println("Cleanly exiting NodeHashRoutine")
 }
 

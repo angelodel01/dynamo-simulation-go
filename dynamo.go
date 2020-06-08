@@ -25,7 +25,7 @@ func simulate_gossip(){
       }
       spawnNodeHB(NodeHB{id: me, Hbcounter: 0, time: 0, dead: false}, my_HB_Table, member_ch)
   }
-  wg.Wait()
+  wg_gossip.Wait()
 }
 
 func simulate_dynamo(){
@@ -49,8 +49,9 @@ func simulate_dynamo(){
 	
     DeleteNodeHash(1)
     DeleteNodeHash(2)
+	
 
-    wg.Wait()
+    wg_hash.Wait()
 }
 
 
@@ -91,6 +92,6 @@ func simulate_con_hash(){
 
     DeleteNodeHash(2)
     DeleteNodeHash(3)
-    wg.Wait()
+    //wg.Wait()
     time.Sleep(2* time.Second)
 }
