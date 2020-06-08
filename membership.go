@@ -29,10 +29,10 @@ func spawnNodeHB(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB, member_ch chan ma
 func listenForTraffic(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
                       member_ch chan map[int]map[int]NodeHB){
   for i := 0; i < max_cycles; i++{//listening on channel
-	
+
     var mp = <-member_ch
-	
-	fmt.Println("listenForTraffic cycle num: %d", i)
+
+	fmt.Printf("listenForTraffic cycle num: %d", i)
     for k, v := range mp{//should only give us one iteration
       HB_mutex.Lock()
       _, found := my_HB_Table[k]
@@ -52,10 +52,13 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
     if found && !value.dead{//if the stuff in the incoming table is in the neighborhood
       if v.time > value.time && v.Hbcounter <= value.Hbcounter{
         HB_mutex.Lock()
-        my_HB_Table[k] = NodeHB{id: v.id, Hbcounter: v.Hbcounter, time: v.time, dead: true}
         HB_mutex.Unlock()
         fmt.Printf("NodeHB %d, has killed NodeHB %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, v.id, k, sender_NodeHB_id, value, my_HB_Table[k], my_NodeHB.id,my_HB_Table)
-        DeleteNodeHash(v.id)
+        fmt.Printf("my_HB_Table[k].dead %v\n", my_HB_Table[k].dead)
+        if !my_HB_Table[k].dead{
+          DeleteNodeHash(v.id)
+        }
+        my_HB_Table[k] = NodeHB{id: v.id, Hbcounter: v.Hbcounter, time: v.time, dead: true}
       }else if v.dead{
         HB_mutex.Lock()
         my_HB_Table[k] = v
