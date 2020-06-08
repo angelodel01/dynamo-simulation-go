@@ -46,10 +46,9 @@ func simulate_dynamo(){
 
 
     simulate_gossip()
-
+	
     DeleteNodeHash(1)
     DeleteNodeHash(2)
-    time.Sleep(2* time.Second)
 
     wg.Wait()
 }
@@ -85,13 +84,13 @@ func simulate_con_hash(){
     DeleteNodeHash(1)
 
     get("Maria")
-    // get("John")
+     get("John")
 
-    // fmt.Println("before deletes")
+     fmt.Println("before deletes")
     DeleteNodeHash(0)
 
     DeleteNodeHash(2)
     DeleteNodeHash(3)
-    // wg.Wait()
-    // time.Sleep(2* time.Second)
+    wg.Wait()
+    time.Sleep(2* time.Second)
 }

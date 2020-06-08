@@ -28,9 +28,11 @@ func spawnNodeHB(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB, member_ch chan ma
 
 func listenForTraffic(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
                       member_ch chan map[int]map[int]NodeHB){
-  defer wg.Done()
   for i := 0; i < max_cycles; i++{//listening on channel
+	
     var mp = <-member_ch
+	
+	fmt.Println("listenForTraffic cycle num: %d", i)
     for k, v := range mp{//should only give us one iteration
       HB_mutex.Lock()
       _, found := my_HB_Table[k]
@@ -40,6 +42,8 @@ func listenForTraffic(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
       }
     }
   }
+  fmt.Println("Cleanly exiting listenForTraffic")
+  wg.Done()
 }
 
 func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]NodeHB, my_HB_Table map[int]NodeHB){
@@ -71,12 +75,12 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
 func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
                       member_ch chan map[int]map[int]NodeHB){
   timer2 := time.NewTimer(time.Second*cycle_time)
-  defer wg.Done()
   var sender_map = make(map[int]map[int]NodeHB)
   my_HB_Table[my_NodeHB.id] = my_NodeHB
   fmt.Printf("NodeHB: %+v, Initial table: %+v\n", my_NodeHB, my_HB_Table)
   sender_map[my_NodeHB.id] = my_HB_Table
   for i := 0; i < max_cycles; i++{
+	fmt.Println("updateHeartBeats cycle num: %d", i)
     <-timer2.C
     if my_NodeHB.id != 0 {
       my_NodeHB.Hbcounter += 1
@@ -92,4 +96,6 @@ func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
     member_ch <- sender_map
     timer2 = time.NewTimer(time.Second)
   }
+  fmt.Println("Cleanly exiting updateHeartBeats")
+  wg.Done()
 }
