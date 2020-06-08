@@ -49,14 +49,14 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
     value, found := my_HB_Table[k]
     if found && !value.dead{//if the stuff in the incoming table is in the neighborhood
       if v.time > value.time && v.Hbcounter <= value.Hbcounter{
-        HB_mutex.Lock()
-        HB_mutex.Unlock()
-        fmt.Printf("NodeHB %d, has killed NodeHB %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, v.id, k, sender_NodeHB_id, value, my_HB_Table[k], my_NodeHB.id,my_HB_Table)
+        fmt.Printf("NodeHB %d, has killed NodeHB %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, v.id, k, sender_NodeHB_id, value, v, my_NodeHB.id,my_HB_Table)
         fmt.Printf("my_HB_Table[k].dead %v\n", my_HB_Table[k].dead)
-        if !my_HB_Table[k].dead{
+        HB_mutex.Lock()
+		my_HB_Table[k] = NodeHB{id: v.id, Hbcounter: v.Hbcounter, time: v.time, dead: true}
+		HB_mutex.Unlock()
+        if my_HB_Table[k].dead{
           DeleteNodeHash(v.id)
         }
-        my_HB_Table[k] = NodeHB{id: v.id, Hbcounter: v.Hbcounter, time: v.time, dead: true}
       }else if v.dead{
         HB_mutex.Lock()
         my_HB_Table[k] = v

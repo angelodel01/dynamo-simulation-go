@@ -60,7 +60,7 @@ func NodeHashRoutine(me NodeHash){
     }
   }
   wg_hash.Done()
-  fmt.Println("Cleanly exiting NodeHashRoutine")
+  fmt.Println("Cleanly exiting NodeHashRoutine", me.id)
 }
 
 
