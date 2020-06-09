@@ -1,0 +1,4 @@
+Maria:100
+John:20
+Anna:40
+Tim:100

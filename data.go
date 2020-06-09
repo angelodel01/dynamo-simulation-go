@@ -35,7 +35,7 @@ var wg_hash sync.WaitGroup
 var HB_mutex sync.Mutex
 // const num_nodes = 8
 const num_neighbors = 2
-const max_cycles = 10
+const max_cycles = 1000
 const cycle_time = 2
 
 ///////////////////////////////

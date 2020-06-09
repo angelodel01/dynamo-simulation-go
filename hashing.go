@@ -19,7 +19,7 @@ func AddNodeHash(id int){
   ring[hash_2] = id
   ring_mutex.Unlock()
   n := NodeHash{id: id, hash_1: hash_1, hash_2: hash_2}
-  fmt.Printf("Adding NodeHash: %+v\n\n", n)
+  //fmt.Printf("Adding NodeHash: %+v\n\n", n)
   request_ch[id] = make(chan Message, 3)
   response_get_ch[id] = make(chan Message, 3)
   response_put_ch[id] = make(chan Message, 3)
@@ -32,8 +32,8 @@ func NodeHashRoutine(me NodeHash){
   file_name := "MEM" + strconv.Itoa(me.id) + ".txt"
   file, _ := os.Create(file_name)
   file.Close()
-  fmt.Println("Nodehash %d	 waiting for a message", me.id)
   for request := range request_ch[me.id]{
+    //fmt.Println("Nodehash %d received a message: %d", me.id, request.command)
     if request.command == "KILL" && request.node_id == me.id{
       fmt.Printf("Node: %d received KILL command\n", me.id)
       ring_mutex.Lock()
@@ -42,7 +42,7 @@ func NodeHashRoutine(me NodeHash){
       ring_mutex.Unlock()
       time.Sleep(time.Second)
       fmt.Printf("NodeHash : %d dies\n\n", me.id)
-      fmt.Printf("Ring %+v\n\n", ring)
+      //fmt.Printf("Ring %+v\n\n", ring)
       close(response_get_ch[me.id])
       close(response_put_ch[me.id])
       close(request_ch[me.id])
@@ -54,9 +54,10 @@ func NodeHashRoutine(me NodeHash){
       fmt.Println("GET REQUEST IN NodeHashRoutine")
       read_val := readFromFile(request.node_id, request.key)
       response_get_ch[me.id] <- Message{command: "CONF_GET", node_id: me.id, key: request.key, val: read_val}
-    } else if (request.command == "PUT" && request.node_id == me.id){
+    } else if (request.command == "PUT"){ // && request.node_id == me.id
       writeToFile(request.node_id, request.val, request.key)
       response_put_ch[me.id] <- Message{command: "CONF_WR", node_id: me.id, key: "N/A", val: -1}
+      fmt.Printf("%v Finished putting data %s\n",me.id, request.key)
     }
   }
   wg_hash.Done()
@@ -71,7 +72,7 @@ func DeleteNodeHash(id int){
 
 
 func get(key string) int{
-  fmt.Println("Inside GET")
+  //fmt.Println("Inside GET")
   hash := GetMD5HashString(key)%mem_size
   original := hash
   ring_mutex.Lock()
@@ -85,8 +86,30 @@ func get(key string) int{
   node_id := ring[hash]
   ring_mutex.Unlock()
   time.Sleep(100 * time.Millisecond)
+  fmt.Println("Requesting nodeid: ", node_id)
   request_ch[node_id] <- Message{command: "GET", node_id: node_id, key: key, val: -1}
-  resp := <-response_get_ch[node_id]
+  received := false
+  node_requested := node_id
+  var resp Message
+  for i := 0; !received && i < 3; i++ {
+      t := time.NewTimer(100 * time.Millisecond)
+      select {
+      case resp = <- response_get_ch[node_requested]:
+          received = true
+          break
+
+      case <- t.C:
+          t = time.NewTimer(100 * time.Millisecond)
+          node_requested = (node_requested + 1) % num_nodes
+          request_ch[node_id] <- Message{command: "GET", node_id: node_id, key: key, val: -1}
+          fmt.Println("Did not receive response trying next node")
+          break
+      }
+  }
+  if !received {
+      fmt.Println("Did not receive successfully from node ", node_requested)
+      return -1
+  }
   if resp.command == "CONF_GET"{
     fmt.Printf("Performed get(key: '%s') hashes to: %d, got NodeHash id: %d\nGot Value: %d, from Key: %s\n\n", key, original, resp.node_id, resp.val, resp.key)
     return resp.node_id
