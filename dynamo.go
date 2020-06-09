@@ -30,6 +30,7 @@ func simulate_gossip(){
 	spawnNodeHB(NodeHB{id: me, Hbcounter: 0, time: 0, dead: false}, array[me], member_ch)
   }
   wg_gossip.Wait()
+  fmt.Println("WAITING ON NODES")
 }
 
 func simulate_dynamo(){
@@ -50,10 +51,10 @@ func simulate_dynamo(){
 
 
     simulate_gossip()
-	
+
     DeleteNodeHash(1)
     DeleteNodeHash(2)
-	
+
 
     wg_hash.Wait()
 }

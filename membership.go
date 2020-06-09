@@ -28,8 +28,9 @@ func spawnNodeHB(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB, member_ch chan ma
 
 func listenForTraffic(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
                       member_ch chan map[int]map[int]NodeHB){
-  for i := 0; i < max_cycles; i++{//listening on channel
-
+  var done bool = false
+  for ; done == false; {//listening on channel
+    fmt.Println("Waiting on message at node: ", my_NodeHB.id)
     var mp = <-member_ch
     for k, v := range mp{//should only give us one iteration
       HB_mutex.Lock()
@@ -39,8 +40,14 @@ func listenForTraffic(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
         updateTable(k, my_NodeHB, v, my_HB_Table)
       }
     }
+    HB_mutex.Lock()
+    me, _ := my_HB_Table[my_NodeHB.id]
+    if me.Hbcounter == -1 {
+        done = true
+    }
+    HB_mutex.Unlock()
   }
-  fmt.Println("Cleanly exiting listenForTraffic")
+  fmt.Println("Cleanly exiting listenForTraffic node: ", my_NodeHB.id)
   wg_gossip.Done()
 }
 
@@ -48,6 +55,7 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
   for k, v := range new_values{//for all the information coming in
     value, found := my_HB_Table[k]
     if found && !value.dead{//if the stuff in the incoming table is in my table and I didn't mark it dead already
+        fmt.Printf("I AM NODE: %d, for node: %d t = %d hb = %d, my t = %d my hb = %d\n", my_NodeHB.id, v.id, v.time, v.Hbcounter, value.time, value.Hbcounter)
       if v.time > value.time && v.Hbcounter <= value.Hbcounter{//If the incoming table's time value has been updated but its heartbeat counter is the same
         fmt.Printf("NodeHB %d, has killed NodeHB %d\n" + "-found %d in table from NodeHB %d\n-updating: %+v to: %+v\n"+ "-NEW NodeHB %d TABLE: %+v\n\n", my_NodeHB.id, v.id, k, sender_NodeHB_id, value, v, my_NodeHB.id,my_HB_Table)
         fmt.Printf("my_HB_Table[k].dead %v\n", my_HB_Table[k].dead)
@@ -76,16 +84,22 @@ func updateTable(sender_NodeHB_id int, my_NodeHB NodeHB, new_values map[int]Node
 func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
                       member_ch chan map[int]map[int]NodeHB){
   timer2 := time.NewTimer(time.Second*cycle_time)
+  dead_time := 0
   var sender_map = make(map[int]map[int]NodeHB)
   my_HB_Table[my_NodeHB.id] = my_NodeHB
   fmt.Printf("NodeHB: %+v, Initial table: %+v\n", my_NodeHB, my_HB_Table)
   sender_map[my_NodeHB.id] = my_HB_Table
   for i := 0; i < max_cycles; i++{
     <-timer2.C
-    if my_NodeHB.id != 0 {
-      my_NodeHB.Hbcounter += 1
-    }
     my_NodeHB.time += 1
+    if i == 2 && my_NodeHB.id == 0{
+        dead_time = 5
+    }
+    if (dead_time == 0) {
+        my_NodeHB.Hbcounter += 1
+    } else {
+        dead_time--
+    }
     HB_mutex.Lock()
     my_HB_Table[my_NodeHB.id] = my_NodeHB
     HB_mutex.Unlock()
@@ -97,5 +111,9 @@ func updateHeartBeats(my_NodeHB NodeHB, my_HB_Table map[int]NodeHB,
     timer2 = time.NewTimer(time.Second)
   }
   fmt.Println("Cleanly exiting updateHeartBeats")
+  HB_mutex.Lock()
+  my_NodeHB.Hbcounter = -1
+  my_HB_Table[my_NodeHB.id] = my_NodeHB
+  HB_mutex.Unlock()
   wg_gossip.Done()
 }
